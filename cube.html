@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>"sphere"</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+        </style>
+        <script src="three.js-master/build/three.js"></script>
+	</head>
+	<body>
+    
+        <script id="vertexShader" type="x-shader/x-vertex">
+
+            uniform float amplitude;
+            uniform vec3 lightPos;
+            attribute float displacement;
+            varying vec3 vNormal;
+
+            void main() {
+
+                vNormal = normal;
+
+                vec3 newPos = position + normal * vec3(displacement * amplitude * 2.0);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);        
+            }
+        </script>
+
+        <script id="fragmentShader" type="x-shader/x-fragment">
+
+            uniform float amplitude;
+            uniform vec3 lightPos;
+            varying vec3 vNormal;
+
+            void main() {
+                vec3 light = vec3(0.5, 0.2, 1);
+                float dProd = max(0.0, dot(vNormal, light));
+                float offset = max(0.1, (amplitude + 1.0) * 0.5);
+                gl_FragColor = vec4(
+                    dProd / offset,  // R
+                    dProd * 0.8,  // G
+                    dProd * offset + 0.2,  // B
+                    1.0     // A
+                );
+              }
+        </script>
+    
+		<script>
+            //setup
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera(
+                75, 
+                window.innerWidth / window.innerHeight, 
+                0.1, 
+                1000
+            )
+            camera.position.z = 40;
+            scene.add(camera);
+            var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+            scene.add(directionalLight);
+            var renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            var clock = new THREE.Clock();
+
+            //geometry
+            var geometry = new THREE.SphereBufferGeometry(10, 32, 32);
+            var displacements = [];
+            for (var v = 0; v < 1089; v++) {
+                displacements.push(Math.random() * 3);
+              };
+            displacements = new Float32Array(displacements);
+            geometry.addAttribute('displacement', new THREE.BufferAttribute(displacements, 1));
+            //shader attributes
+
+            //shader material
+            var uniforms = {
+                amplitude: {value: 1.0},
+                lightPos: {value: camera.getWorldDirection()},
+            }
+
+            var vertex = document.getElementById('vertexShader').textContent;
+            var fragment = document.getElementById('fragmentShader').textContent;
+            var material = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: vertex,
+                fragmentShader: fragment,
+            });
+            //var stdmaterial = new THREE.MeshStandardMaterial();
+
+            //sphere
+            var sphere = new THREE.Mesh(geometry, material);
+            scene.add(sphere);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                //sphere.rotation.x += 0.01;
+                //sphere.rotation.y += 0.005;
+                uniforms.amplitude.value = Math.sin(clock.getElapsedTime());
+                renderer.render(scene, camera);
+            }
+            animate();
+        </script>
+        
+	</body>
+</html>
